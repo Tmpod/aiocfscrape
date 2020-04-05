@@ -74,6 +74,9 @@ class CloudflareCaptchaError(aiohttp.ClientResponseError):
 
 
 class CloudflareScraper(aiohttp.ClientSession):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.org_method = None
 
     async def _request(self, method, url, *args, allow_403=False, **kwargs):
         resp = await super()._request(method, url, *args, **kwargs)
@@ -122,12 +125,12 @@ class CloudflareScraper(aiohttp.ClientSession):
         start_time = time.time()
 
         body = await resp.text()
-        parsed_url = urlparse(resp.url)
+        parsed_url = urlparse(str(resp.url))
         domain = parsed_url.netloc
         challenge_form = re.search(r'\<form.*?id=\"challenge-form\".*?\/form\>', body, flags=re.S).group(0)  # find challenge form
         method = re.search(r'method=\"(.*?)\"', challenge_form, flags=re.S).group(1)
         if self.org_method is None:
-            self.org_method = resp.request.method
+            self.org_method = resp.method
         submit_url = '%s://%s%s' % (parsed_url.scheme, domain,
                                     re.search(r'action=\"(.*?)\"', challenge_form, flags=re.S).group(1).split('?')[0])
 
